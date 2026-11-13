@@ -1,0 +1,25 @@
+name: daily dependency check
+run-name: daily dependency check ${{ inputs.run || 'scheduled' }}
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 07:00 in Paris in winter
+  workflow_dispatch:
+    inputs:
+      run:
+        description: "A name for this run, to start new sessions on the same day (for example take-2)"
+        required: false
+
+jobs:
+  start:
+    # Scheduled checks are skipped while the repository variable DAILY_CHECKS is "paused" (while filming the demo).
+    if: github.event_name != 'schedule' || vars.DAILY_CHECKS != 'paused'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Start today's checks on the deployed agent
+        run: uv run --frozen --no-dev python scripts/start_checks.py
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          CHECK_RUN: ${{ inputs.run }}
